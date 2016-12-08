@@ -1,4 +1,6 @@
 <?php
+    if (PHP_INT_SIZE != 8) { die('64-bit PHP required'); }
+
     define('DISPLAY_WIDTH', 50);
     define('DISPLAY_HEIGHT', 6);
 
