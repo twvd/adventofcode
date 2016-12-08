@@ -21,10 +21,8 @@
     // Run the display instructions
     foreach (file('8.txt') as $instruction) {
 	if (sscanf($instruction, 'rect %dx%d', $width, $height)) {
-	    for ($y = 0; $y < $height; $y++) {
-		for ($x = 0; $x < $width; $x++) {
-		    $display[$x] |= (1 << $y);
-		}
+	    for ($x = 0; $x < $width; $x++) {
+		$display[$x] |= ((1 << $height) - 1);
 	    }
 	} else if (sscanf($instruction, 'rotate row y=%d by %d', $srcY, $rotBy)) {
 	    // Shift across the array, slightly more tricky.
