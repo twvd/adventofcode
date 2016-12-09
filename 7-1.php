@@ -1,44 +1,44 @@
 <?php
-    // Function to check if a certain IPv7 address segment has ABBA
-    function hasABBA($segment) {
-	if (strlen($segment) < 4) { return false; }
+// Function to check if a certain IPv7 address segment has ABBA
+function hasABBA($segment) {
+    if (strlen($segment) < 4) { return false; }
 
-	for ($i = 2; $i < strlen($segment); $i++) {
-	    $left = substr($segment, $i - 2, 2);
-	    $right = substr($segment, $i, 2);
+    for ($i = 2; $i < strlen($segment); $i++) {
+        $left = substr($segment, $i - 2, 2);
+        $right = substr($segment, $i, 2);
 
-	    if ($left == $right) { continue; }
+        if ($left == $right) { continue; }
 
-	    if ($left == strrev($right)) {
-		return true;
-	    }
-	}
-
-	return false;
+        if ($left == strrev($right)) {
+            return true;
+        }
     }
 
-    $ipsWithTls = 0;
+    return false;
+}
 
-    foreach (file('7.txt') as $line) {
-	preg_match_all('/[a-z]+/', $line, $matches);
+$ipsWithTls = 0;
 
-	// Text between square brackets is every odd match, so we can just switch it every iteration
-	$isSquare = false;
-	$abbaFound = false;
+foreach (file('7.txt') as $line) {
+    preg_match_all('/[a-z]+/', $line, $matches);
 
-	foreach ($matches[0] as $segment) {
-	    $hasABBA = hasABBA($segment);
+    // Text between square brackets is every odd match, so we can just switch it every iteration
+    $isSquare = false;
+    $abbaFound = false;
 
-	    if ($isSquare && $hasABBA) {
-		continue 2;
-	    } else if ($hasABBA) {
-		$abbaFound = true;
-	    }
+    foreach ($matches[0] as $segment) {
+        $hasABBA = hasABBA($segment);
 
-	    $isSquare = !$isSquare;
-	}
+        if ($isSquare && $hasABBA) {
+            continue 2;
+        } else if ($hasABBA) {
+            $abbaFound = true;
+        }
 
-	if ($abbaFound) { $ipsWithTls++; }
+        $isSquare = !$isSquare;
     }
 
-    echo $ipsWithTls . PHP_EOL;
+    if ($abbaFound) { $ipsWithTls++; }
+}
+
+echo $ipsWithTls . PHP_EOL;
