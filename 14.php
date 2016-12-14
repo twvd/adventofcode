@@ -31,7 +31,7 @@ for ($index = 0; $hashesFound < 64; $index++) {
         continue;
     }
 
-    for ($nidx = 1; $nidx < 1000; $nidx++) {
+    for ($nidx = 1; $nidx <= 1000; $nidx++) {
         $currentHash5 = getHash($index + $nidx);
 
         // Check for 5 consequent characters
