@@ -1,7 +1,6 @@
 <?php
 function md5stretch(string $h, int $stretch = 0) : string {
-    $stretch++;
-    while ($stretch--) { $h = md5($h); }
+    do { $h = md5($h); } while ($stretch--);
     return $h;
 }
 
