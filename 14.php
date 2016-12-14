@@ -1,12 +1,12 @@
 <?php
-function md5stretch(string $h, int $stretch = 0) {
+function md5stretch(string $h, int $stretch = 0) : string {
     $stretch++;
     while ($stretch--) { $h = md5($h); }
     return $h;
 }
 
 // Hash calculation function that keeps a cache of results
-function getHash($i) {
+function getHash(int $i) : string {
     global $hashCache, $salt, $stretchCount;
     if (!isset($hashCache[$i])) { $hashCache[$i] = md5stretch($salt.$i, $stretchCount); }
     return $hashCache[$i];
