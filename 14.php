@@ -41,7 +41,7 @@ for ($index = 0; $hashesFound < 64; $index++) {
 
         if ($match5[1] == $match[1]) {
             $hashesFound++;
-            printf('%02d: %d (%s)' . PHP_EOL, $hashesFound, $index, $currentHash);
+            printf('%02d: %d (%s) - %d (%s)' . PHP_EOL, $hashesFound, $index, $currentHash, ($index + $nidx), $currentHash5);
             break;
         }
     }
