@@ -28,18 +28,22 @@ for ($index = 0; $hashesFound < 64; $index++) {
     $currentHash = getHash($index);
 
     // Find if there are 3 consequent characters
-    if (preg_match('/([a-z0-9])\1\1/', $currentHash, $match)) {
-        for ($nidx = 1; $nidx < 1000; $nidx++) {
-            $currentHash5 = getHash($index + $nidx);
+    if (!preg_match('/([a-z0-9])\1{2}/', $currentHash, $match)) {
+        continue;
+    }
 
-            // Check for 5 consequent characters
-            if (preg_match('/([a-z0-9])\1\1\1\1/', $currentHash5, $match5)) {
-                if ($match5[1] == $match[1]) {
-                    $hashesFound++;
-                    printf('%02d: %d (%s)' . PHP_EOL, $hashesFound, $index, $currentHash);
-                    break;
-                }
-            }
+    for ($nidx = 1; $nidx < 1000; $nidx++) {
+        $currentHash5 = getHash($index + $nidx);
+
+        // Check for 5 consequent characters
+        if (!preg_match('/([a-z0-9])\1{4}/', $currentHash5, $match5)) {
+            continue;
+        }
+
+        if ($match5[1] == $match[1]) {
+            $hashesFound++;
+            printf('%02d: %d (%s)' . PHP_EOL, $hashesFound, $index, $currentHash);
+            break;
         }
     }
 }
