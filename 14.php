@@ -27,7 +27,7 @@ for ($index = 0; $hashesFound < 64; $index++) {
     $currentHash = getHash($index);
 
     // Find if there are 3 consequent characters
-    if (!preg_match('/([a-z0-9])\1{2}/', $currentHash, $match)) {
+    if (!preg_match('/([0-9a-f])\1{2}/', $currentHash, $match)) {
         continue;
     }
 
@@ -35,7 +35,7 @@ for ($index = 0; $hashesFound < 64; $index++) {
         $currentHash5 = getHash($index + $nidx);
 
         // Check for 5 consequent characters
-        if (!preg_match('/([a-z0-9])\1{4}/', $currentHash5, $match5)) {
+        if (!preg_match('/([0-9a-f])\1{4}/', $currentHash5, $match5)) {
             continue;
         }
 
