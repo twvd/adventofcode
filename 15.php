@@ -13,15 +13,17 @@ class Disc {
     public function isOpenAt(int $time) : bool {
         return ($this->getPosition($time) == 0);
     }
-    public function getReturnToZero($time): int {
+    public function getReturnToZero(int $time) : int {
         return ($this->max - $this->getPosition($time));
     }
 };
 
 function runPuzzle(array $discs) {
-    $time = 0;
     $rounds = 0;
     $tStart = microtime(true);
+
+    // Optimization: start at the first time the first disc hits 0
+    $time = $discs[0]->getReturnToZero(1);
 
     while (true) {
         $rounds++;
