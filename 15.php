@@ -7,23 +7,41 @@ class Disc {
         $this->max = $max;
         $this->initial = $initial;
     }
+    public function getPosition(int $time) : int {
+        return (($this->initial + $time) % $this->max);
+    }
     public function isOpenAt(int $time) : bool {
-        return ((($this->initial + $time) % $this->max) == 0);
+        return ($this->getPosition($time) == 0);
+    }
+    public function getReturnToZero($time): int {
+        return ($this->max - $this->getPosition($time));
     }
 };
 
-function runPuzzle(array $discs) : int {
+function runPuzzle(array $discs) {
     $time = 0;
-    for ($time = 0; true; $time++) {
+    $rounds = 0;
+    $tStart = microtime(true);
+
+    while (true) {
+        $rounds++;
+        $returnToZero = 1;
+
         for ($t = 0; $t < count($discs); $t++) {
             $itime = $time + $t + 1;
             if (!$discs[$t]->isOpenAt($itime)) {
+                // Optimization: we only have to consider the next time that all the discs that
+                // are at 0 now are at 0 again, so skip forward in time.
+                $time += $returnToZero;
                 continue 2;
             }
+
+            $returnToZero *= $discs[$t]->getReturnToZero($itime);
         }
         break;
     }
-    return $time;
+
+    echo 'Answer: ' . $time . ' (found in ' . $rounds . ' rounds, ' . ((microtime(true) - $tStart) * 1000) . ' ms)' . PHP_EOL;
 }
 
 $instructions = file('15.txt');
@@ -36,8 +54,10 @@ foreach ($instructions as $line) {
     $discs []= new Disc($initial, $max);
 }
 
-echo 'Answer #1: ' . runPuzzle($discs) . PHP_EOL;
+echo 'Puzzle #1: ';
+runPuzzle($discs);
 
 // Add the extra disc for puzzle #2
 $discs []= new Disc(0, 11);
-echo 'Answer #2: ' . runPuzzle($discs) . PHP_EOL;
+echo 'Puzzle #2: ';
+runPuzzle($discs);
