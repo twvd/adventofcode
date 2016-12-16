@@ -12,10 +12,10 @@ function dragonCurve(string $a) : string {
 
 function checksum(string $s) : string {
     $checksum = '';
+    $len = strlen($s);
 
-    for ($i = 0; $i < strlen($s); $i += 2) {
-        $part = substr($s, $i, 2);
-        if ($part{0} == $part{1}) {
+    for ($i = 0; $i < $len; $i += 2) {
+        if ($s{$i} == $s{$i + 1}) {
             $checksum .= '1';
         } else {
             $checksum .= '0';
