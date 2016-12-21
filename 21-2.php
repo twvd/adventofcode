@@ -45,6 +45,7 @@ function scramble(string $input) : string {
     return implode('', $input);
 }
 
+// http://stackoverflow.com/questions/2617055/how-to-generate-all-permutations-of-a-string-in-php
 function permute($arg) {
     $array = is_string($arg) ? str_split($arg) : $arg;
     if(1 === count($array))
