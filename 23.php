@@ -1,6 +1,4 @@
 <?php
-$code = file('23.txt');
-
 // Map for tgl instruction
 $tglOpcodes = [
     'inc' => 'dec',
@@ -12,24 +10,36 @@ $tglOpcodes = [
 
 // Initial state of register file
 $registers = [
-    'a' => 7,
+    'a' => $argv[1],
     'b' => 0,
     'c' => 0,
     'd' => 0
 ];
 $cycles = 0;
 
+$code = file_get_contents('23.txt');
+
+// Replace MUL-routine by instruction
+$code = str_replace('inc a
+dec c
+jnz c -2
+dec d
+jnz d -5',
+'mul b d
+nop
+nop
+nop
+nop',
+$code);
+
+$code = explode("\n", trim($code));
 $code = array_map(function ($a) { return explode(' ', trim($a)); }, $code);
 
 for ($ptr = 0; $ptr < count($code); $ptr++) {
     // Load and split instruction
     $instr = $code[$ptr][0];
-    $x = $code[$ptr][1];
-    if (isset($code[$ptr][2])) {
-        $y = $code[$ptr][2];
-    } else {
-        unset($y);
-    }
+    if (isset($code[$ptr][1])) { $x = $code[$ptr][1]; } else { unset($x); }
+    if (isset($code[$ptr][2])) { $y = $code[$ptr][2]; } else { unset($y); }
 
     //echo $cycles . ':' . $ptr . ':' . $instr . ' ' . $x . ' ' . (isset($y) ? $y : '') . ' (' . implode(':', $registers) . ')' . PHP_EOL;
 
@@ -61,6 +71,12 @@ for ($ptr = 0; $ptr < count($code); $ptr++) {
         if ($p < count($code)) {
             $code[$p][0] = $tglOpcodes[$code[$p][0]];
         }
+    }
+    else if ($instr == 'nop') { /* nop! */ }
+    else if ($instr == 'mul') {
+        $registers['a'] = ($registers[$x] * $registers[$y]);
+        $registers['c'] = 0;
+        $registers['d'] = 0;
     }
     else { die('Invalid instruction: ' . $instr); }
 
