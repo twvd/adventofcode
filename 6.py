@@ -1,5 +1,5 @@
 with open('6.txt') as f:
-    buckets = tuple(map(int, f.readline().strip().split('\t')))
+    buckets = list(map(int, f.readline().strip().split('\t')))
 
 seen = set()
 
@@ -12,23 +12,22 @@ while True:
     idx = buckets.index(max(buckets))
     spread = buckets[idx]
 
-    newb = list(buckets)
-    newb[idx] = 0
+    buckets[idx] = 0
 
     while spread > 0:
         idx = (idx + 1) % len(buckets)
-        newb[idx] += 1
+        buckets[idx] += 1
         spread -= 1
 
-    buckets = tuple(newb)
+    tbuckets = tuple(buckets)
 
     if lookForA2 is None:
-        if buckets in seen:
+        if tbuckets in seen:
             print("Answer #1: %d" % steps)
-            lookForA2 = buckets
+            lookForA2 = tbuckets
             steps = 0
-        seen.add(buckets)
+        seen.add(tbuckets)
     else:
-        if buckets == lookForA2:
+        if tbuckets == lookForA2:
             print("Answer #2: %d" % steps)
             break
