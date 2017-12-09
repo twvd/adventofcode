@@ -18,11 +18,11 @@ inp = garbageExp.sub('', inp)
 # Score the groups
 depth = 0
 answer1 = 0
-for i in range(len(inp)):
-    if (inp[i] == '{'):
+for c in inp:
+    if c == '{':
         depth += 1
         answer1 += depth
-    elif (inp[i] == '}'):
+    elif c == '}':
         depth -= 1
 
 print("Answer #1: %d" % answer1)
