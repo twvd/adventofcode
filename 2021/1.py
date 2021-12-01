@@ -12,7 +12,7 @@ def increments(a: [int]) -> int:
     
 def rolling_window(a: [], window_size: int):
     for i in range(len(a) - window_size + 1):
-        yield inp[i:i+window_size]
+        yield a[i:i+window_size]
 
 print("Answer #1:", increments(inp))
 print("Answer #2:", increments([sum(x) for x in rolling_window(inp, 3)]))
