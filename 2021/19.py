@@ -96,7 +96,7 @@ def transform_points(points, offset, transform):
     return [add_3d(*transform(*p), *offset) for p in points]
 
 def part1(scanners):
-    Match = namedtuple('Match', ['psc', 'transform', 'offset'])
+    Match = namedtuple('Match', ['psci', 'transform', 'offset'])
     points = scanners[0][:]
     done = {0: (0, None, None)}
     scannerabs = {0: (0, 0, 0)}
@@ -119,18 +119,18 @@ def part1(scanners):
                 done[sci] = Match(psci, res.transform, res.offset)
                     
                 # Transform back to relative to scanner 0
-                tstep = sci
-                tpoints = sc[:]
-                scabs = res.offset
+                tstep, tpoints, scabs = sci, sc[:], res.offset
                 while tstep != 0:
                     # Transform back to parent scanner
-                    psc = done[tstep]
-                    
+                    psc = done[tstep]                    
                     tpoints = transform_points(tpoints, psc.offset, psc.transform)
+
                     # Transform scanner coordinates
                     if tstep != sci:
                         scabs = add_3d(*psc.transform(*scabs), *psc.offset)
-                    tstep = psc.psc
+
+                    tstep = psc.psci
+
                 points += tpoints
                 scannerabs[sci] = scabs
                 print(f"{len(done)}/{len(scanners)} resolved {sci} from {psci} @ {scabs}")
