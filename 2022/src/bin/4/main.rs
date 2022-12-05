@@ -6,9 +6,10 @@ type GroupAssign = [Range<u32>; 2];
 fn part1(groups: &Vec<GroupAssign>) -> usize {
     groups
         .iter()
-        .filter(|g|
-            (g[0].start >= g[1].start && g[0].end <= g[1].end) ||
-            (g[1].start >= g[0].start && g[1].end <= g[0].end))
+        .filter(|g| {
+            (g[0].start >= g[1].start && g[0].end <= g[1].end)
+                || (g[1].start >= g[0].start && g[1].end <= g[0].end)
+        })
         .collect::<Vec<&GroupAssign>>()
         .len()
 }
@@ -22,8 +23,7 @@ fn part2(groups: &Vec<GroupAssign>) -> usize {
 }
 
 fn main() {
-    let inp = fs::read_to_string("inputs/4.txt")
-        .unwrap();
+    let inp = fs::read_to_string("inputs/4.txt").unwrap();
 
     let mut groups: Vec<GroupAssign> = Vec::new();
     for l in inp.lines() {
@@ -34,7 +34,7 @@ fn main() {
 
         groups.push([
             spl.next().unwrap()..spl.next().unwrap(),
-            spl.next().unwrap()..spl.next().unwrap()
+            spl.next().unwrap()..spl.next().unwrap(),
         ]);
     }
 

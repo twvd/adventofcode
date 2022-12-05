@@ -4,14 +4,14 @@ use std::fs;
 enum GameResult {
     Win = 6,
     Loss = 0,
-    Draw = 3
+    Draw = 3,
 }
 
 #[derive(PartialEq, Copy, Clone)]
 enum GameChoice {
     Rock = 1,
     Paper = 2,
-    Scissors = 3
+    Scissors = 3,
 }
 
 fn translate_choice(c: char) -> Result<GameChoice, &'static str> {
@@ -19,7 +19,7 @@ fn translate_choice(c: char) -> Result<GameChoice, &'static str> {
         'A' | 'X' => Ok(GameChoice::Rock),
         'B' | 'Y' => Ok(GameChoice::Paper),
         'C' | 'Z' => Ok(GameChoice::Scissors),
-        _ => Err("Unknown value")
+        _ => Err("Unknown value"),
     }
 }
 
@@ -28,7 +28,7 @@ fn translate_result(c: char) -> Result<GameResult, &'static str> {
         'X' => Ok(GameResult::Loss),
         'Y' => Ok(GameResult::Draw),
         'Z' => Ok(GameResult::Win),
-        _ => Err("Unknown value")
+        _ => Err("Unknown value"),
     }
 }
 
@@ -39,16 +39,16 @@ fn turn(a: GameChoice, b: GameChoice) -> GameResult {
         match a {
             GameChoice::Rock => match b {
                 GameChoice::Scissors => GameResult::Win,
-                _ => GameResult::Loss
+                _ => GameResult::Loss,
             },
             GameChoice::Paper => match b {
                 GameChoice::Rock => GameResult::Win,
-                _ => GameResult::Loss
+                _ => GameResult::Loss,
             },
             GameChoice::Scissors => match b {
                 GameChoice::Paper => GameResult::Win,
-                _ => GameResult::Loss
-            }
+                _ => GameResult::Loss,
+            },
         }
     }
 }
@@ -60,16 +60,16 @@ fn get_choice(choice: GameChoice, result: GameResult) -> GameChoice {
         match choice {
             GameChoice::Rock => match result {
                 GameResult::Win => GameChoice::Paper,
-                _ => GameChoice::Scissors
+                _ => GameChoice::Scissors,
             },
             GameChoice::Paper => match result {
                 GameResult::Win => GameChoice::Scissors,
-                _ => GameChoice::Rock
+                _ => GameChoice::Rock,
             },
             GameChoice::Scissors => match result {
                 GameResult::Win => GameChoice::Rock,
-                _ => GameChoice::Paper
-            }
+                _ => GameChoice::Paper,
+            },
         }
     }
 }
@@ -104,10 +104,7 @@ fn main() {
     let inp = fs::read_to_string("inputs/2.txt")
         .unwrap()
         .lines()
-        .map(|l| (
-                l.chars().nth(0).unwrap(),
-                l.chars().nth(2).unwrap()
-            ))
+        .map(|l| (l.chars().nth(0).unwrap(), l.chars().nth(2).unwrap()))
         .collect::<Vec<(char, char)>>();
 
     println!("Answer #1: {}", part1(&inp));
