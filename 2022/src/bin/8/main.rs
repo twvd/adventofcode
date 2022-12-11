@@ -32,10 +32,9 @@ fn is_visible(grid: &Grid, x: usize, y: usize) -> bool {
     let x_end = grid[0].len() - 1;
     let y_end = grid.len() - 1;
     if x > 0 && x < x_end && y > 0 && y < y_end {
-        get_lines(x, y, x_end, y_end).iter().any(|line| {
-            line.iter()
-                .all(|(ix, iy)| grid[*iy][*ix] < grid[y][x])
-        })
+        get_lines(x, y, x_end, y_end)
+            .iter()
+            .any(|line| line.iter().all(|(ix, iy)| grid[*iy][*ix] < grid[y][x]))
     } else {
         // Outside border
         true
