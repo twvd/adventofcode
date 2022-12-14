@@ -50,8 +50,7 @@ fn part1(packets: &Vec<PacketField>) -> usize {
         .tuples()
         .enumerate()
         .filter(|(_, (l, r))| l < r)
-        .map(|(i, _)| i + 1)
-        .sum()
+        .fold(0, |acc, (i, _)| acc + (i + 1))
 }
 
 fn part2(origpackets: &Vec<PacketField>) -> usize {
@@ -63,11 +62,11 @@ fn part2(origpackets: &Vec<PacketField>) -> usize {
     packets.extend_from_slice(&dividers);
     packets.sort();
 
-    let mut answer = 1;
-    for d in dividers {
-        answer *= packets.iter().position(|p| p == &d).unwrap() + 1;
-    }
-    answer
+    packets
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| dividers.contains(p))
+        .fold(1, |acc, (i, _)| acc * (i + 1))
 }
 
 fn main() {
