@@ -43,6 +43,7 @@ impl Direction {
 }
 
 type Coord = (i32, i32);
+type Segment = i32;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum MapTile {
@@ -97,7 +98,46 @@ impl Map {
         None
     }
 
-    fn next_coord(self: &Self, coord: Coord, dir: Direction, part2: bool) -> Coord {
+    fn coord_to_segment(self: &Self, coord: Coord) -> Segment {
+        // This assumes a fixed layout in the input
+        match coord {
+            (50..=99, 0..=49) => 0,
+            (100..=149, 0..=49) => 1,
+            (50..=99, 50..=99) => 2,
+            (0..=49, 100..=149) => 3,
+            (50..=99, 100..=149) => 4,
+            (0..=49, 150..=199) => 5,
+            _ => unreachable!(),
+        }
+    }
+
+    fn transition_segment(
+        self: &Self,
+        p: Coord,
+        d: Direction,
+        oldseg: Segment,
+    ) -> (Coord, Direction) {
+        // This assumes a fixed layout in the input
+        match (oldseg, d) {
+            (0, Direction::Up) => ((0, 100 + p.0), Direction::Right),
+            (0, Direction::Left) => ((0, 149 - p.1), Direction::Right),
+            (1, Direction::Up) => ((p.0 - 100, 199), d),
+            (1, Direction::Right) => ((99, 149 - p.1), Direction::Left),
+            (1, Direction::Down) => ((99, p.0 - 50), Direction::Left),
+            (2, Direction::Right) => ((p.1 + 50, 49), Direction::Up),
+            (2, Direction::Left) => ((p.1 - 50, 100), Direction::Down),
+            (3, Direction::Up) => ((50, p.0 + 50), Direction::Right),
+            (3, Direction::Left) => ((50, 149 - p.1), Direction::Right),
+            (4, Direction::Right) => ((149, 149 - p.1), Direction::Left),
+            (4, Direction::Down) => ((49, 100 + p.0), Direction::Left),
+            (5, Direction::Right) => ((p.1 - 100, 149), Direction::Up),
+            (5, Direction::Down) => ((p.0 + 100, 0), d),
+            (5, Direction::Left) => ((p.1 - 100, 0), Direction::Down),
+            _ => unreachable!(),
+        }
+    }
+
+    fn next_coord(self: &Self, coord: Coord, dir: Direction, part2: bool) -> (Coord, Direction) {
         let rel = match dir {
             Direction::Up => (0, -1),
             Direction::Down => (0, 1),
@@ -108,16 +148,16 @@ impl Map {
         let step = ((coord.0 + rel.0), (coord.1 + rel.1));
 
         match self.get(step) {
-            MapTile::Wall | MapTile::Floor => step,
+            MapTile::Wall | MapTile::Floor => (step, dir),
             MapTile::Void => {
                 if !part2 {
                     let mut p = coord;
                     while self.get(p) != MapTile::Void {
                         p = (p.0 - rel.0, p.1 - rel.1);
                     }
-                    (p.0 + rel.0, p.1 + rel.1)
+                    ((p.0 + rel.0, p.1 + rel.1), dir)
                 } else {
-                    panic!("TODO");
+                    self.transition_segment(step, dir, self.coord_to_segment(coord))
                 }
             }
         }
@@ -152,11 +192,12 @@ fn solve(map: &Map, instr: &Instructions, part2: bool) -> i32 {
             Instruction::TurnRight => dir = dir.turn_right(),
             Instruction::Move(steps) => {
                 for _ in 0..*steps {
-                    let newpos = map.next_coord(pos, dir, part2);
+                    let (newpos, newdir) = map.next_coord(pos, dir, part2);
                     if map.get(newpos) == MapTile::Wall {
                         break;
                     }
                     pos = newpos;
+                    dir = newdir;
                 }
             }
         }
