@@ -1,7 +1,9 @@
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use pathfinding::prelude::bfs;
 use regex::Regex;
 use std::cell::RefCell;
+use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::ops::Index;
@@ -38,7 +40,7 @@ impl<'v> Valves<'v> {
         }
 
         Valves {
-            bfscache: RefCell::new(BfsCache::new()),
+            bfscache: RefCell::new(BfsCache::with_capacity(500)),
             valves: HashMap::from_iter(LINERE.captures_iter(inp).map(|m| {
                 (
                     m.get(1).unwrap().as_str(),
@@ -83,6 +85,16 @@ impl<'v> Valves<'v> {
     fn distance_to(self: &Self, from: &str, dest: &str) -> i32 {
         self.bfs_to(from, dest).len() as i32 + 1
     }
+
+    fn split_up(self: &Self, actors: usize) -> Vec<Vec<&'v Valve>> {
+        let vs = self
+            .valves
+            .values()
+            .filter(|v| v.flowrate > 0)
+            .collect::<Vec<&'v Valve>>();
+        let vslen = vs.len();
+        vs.into_iter().combinations(vslen / actors).collect()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -93,10 +105,12 @@ struct State<'s, 'v> {
     valves: &'s Valves<'v>,
     total_flow: i32,
     history: Vec<String>,
+    valves_usable: HashSet<&'s Valve<'v>>,
+    endmin: i32,
 }
 
 impl<'s, 'v> State<'s, 'v> {
-    fn new(valves: &'s Valves<'v>) -> State<'s, 'v> {
+    fn new(valves: &'s Valves<'v>, usable: Vec<&'v Valve>, endmin: i32) -> State<'s, 'v> {
         State {
             position: String::from("AA"),
             valves_open: HashSet::from_iter(valves.valves.values().filter(|v| v.flowrate == 0)),
@@ -104,6 +118,8 @@ impl<'s, 'v> State<'s, 'v> {
             valves: &valves,
             total_flow: 0,
             history: vec![],
+            valves_usable: HashSet::from_iter(usable.into_iter()),
+            endmin,
         }
     }
 
@@ -126,14 +142,22 @@ impl<'s, 'v> State<'s, 'v> {
     }
 
     fn move_to_one(self: &mut Self, destination: &str) {
+        if self.minute >= self.endmin {
+            return;
+        }
+
         assert!(self.current_valve().routes.contains(&destination));
+        assert_ne!(destination, self.position.as_str());
         self.inc_minute();
         self.position = String::from(destination);
         self.history.push(String::from(&self.position));
     }
 
     fn open_valve(self: &mut Self) {
-        if self.valves_open.contains(self.current_valve()) {
+        if self.valves_open.contains(self.current_valve())
+            || !self.valves_usable.contains(self.current_valve())
+            || self.minute >= self.endmin
+        {
             return;
         }
         self.inc_minute();
@@ -148,7 +172,7 @@ impl<'s, 'v> State<'s, 'v> {
             .valves
             .iter()
             .filter_map(|(&n, &ref v)| {
-                if self.valves_open.contains(&v) {
+                if self.valves_open.contains(&v) || !self.valves_usable.contains(&v) {
                     None
                 } else {
                     Some(n)
@@ -162,6 +186,7 @@ impl<'s, 'v> State<'s, 'v> {
     }
 
     fn inc_minute(self: &mut Self) {
+        assert!(self.minute < self.endmin);
         self.total_flow += self.flow_per_minute();
         self.minute += 1;
     }
@@ -177,20 +202,16 @@ impl<'s, 'v> State<'s, 'v> {
     }
 
     fn next_stops(self: &Self) -> Vec<&str> {
-        let mut stops: Vec<&str> = self
-            .closed_valves()
-            .into_iter()
-            .filter(|v| self.valves[v].flowrate > 0)
-            .collect();
+        let mut stops: Vec<&str> = self.closed_valves().into_iter().collect();
         stops.sort_by_cached_key(|k| {
             self.valves[k].flowrate / self.valves.distance_to(self.position.as_str(), k)
         });
         stops
     }
 
-    fn potential(self: &Self, last_minute: i32) -> i32 {
-        assert!(self.minute <= last_minute);
-        let min_left = last_minute - self.minute;
+    fn potential(self: &Self) -> i32 {
+        assert!(self.minute <= self.endmin);
+        let min_left = self.endmin - self.minute;
         self.total_flow
             + (self.flow_per_minute() * min_left)
             + (self
@@ -204,37 +225,21 @@ impl<'s, 'v> State<'s, 'v> {
 fn find_best<'a>(
     valves: &'a Valves,
     endmin: i32,
-    ignore_valves: Option<HashSet<&'a Valve>>,
+    usable_valves: Vec<&'a Valve>,
 ) -> Option<State<'a, 'a>> {
-    let mut initial_state: State = State::new(&valves);
+    let initial_state: State = State::new(&valves, usable_valves, endmin);
     let mut solves: Vec<State> = vec![];
     let mut max_solve: i32 = 0;
-    let mut paths_followed: HashSet<String> = HashSet::new();
-
-    let mut stat_path_discard_timeout = 0;
-    let mut stat_path_discard_dup = 0;
-    let mut stat_path_followed = 0;
-    let mut stat_path_discard_low_pot = 0;
-
-    if ignore_valves.is_some() {
-        initial_state.valves_open.extend(ignore_valves.unwrap());
-    }
+    let mut paths_followed: HashSet<String> = HashSet::with_capacity(50000);
 
     let mut work: Vec<State> = vec![initial_state];
     work.reserve(1000);
 
     while let Some(w) = work.pop() {
         if paths_followed.contains(&w.get_history()) {
-            stat_path_discard_dup += 1;
             continue;
         }
-        if w.minute > endmin {
-            stat_path_discard_timeout += 1;
-            continue;
-        }
-
-        if w.potential(endmin) <= max_solve {
-            stat_path_discard_low_pot += 1;
+        if w.potential() <= max_solve {
             continue;
         }
 
@@ -243,12 +248,6 @@ fn find_best<'a>(
             let mut wn = w.to_owned();
             wn.advance_minutes(endmin);
             if wn.total_flow > max_solve {
-                println!(
-                    "{} {} (queue: {})",
-                    wn.total_flow,
-                    wn.get_history(),
-                    work.len()
-                );
                 max_solve = wn.total_flow;
             }
             solves.push(wn);
@@ -256,28 +255,43 @@ fn find_best<'a>(
             for n in next_stops {
                 let mut wn = w.to_owned();
                 wn.move_to(n);
-                let mut wnopen = wn.clone();
-                wnopen.open_valve();
+                wn.open_valve();
                 work.push(wn);
-                work.push(wnopen);
-                stat_path_followed += 1;
             }
         }
         paths_followed.insert(w.get_history());
     }
 
-    println!("Solves: {} - paths followed: {} - paths discarded: {}/{}/{} (timeout/duplicate/potential) - bfs cache: {}",
-        solves.len(), &stat_path_followed, &stat_path_discard_timeout, &stat_path_discard_dup, &stat_path_discard_low_pot, valves.bfscache.borrow().len());
-
     solves.into_iter().max_by_key(|s| s.total_flow)
 }
 
 fn part1(valves: &Valves) -> i32 {
-    find_best(&valves, 30, None).unwrap().total_flow
+    find_best(&valves, 30, valves.valves.values().collect::<Vec<&Valve>>())
+        .unwrap()
+        .total_flow
 }
 
 fn part2(valves: &Valves) -> i32 {
-    todo!();
+    let mut combiscores: HashMap<Vec<&str>, i32> = HashMap::new();
+    for vs in valves.split_up(2) {
+        let key: Vec<&str> = vs.iter().map(|v| v.name).collect();
+        combiscores.insert(
+            key,
+            find_best(&valves, 26, vs.to_owned()).unwrap().total_flow,
+        );
+    }
+
+    let mut max_combi = 0;
+    for (set1, score1) in combiscores.iter() {
+        for (_, score2) in combiscores
+            .iter()
+            .filter(|(k, _)| !k.into_iter().any(|n| set1.contains(n)))
+        {
+            max_combi = max(max_combi, score1 + score2);
+        }
+    }
+
+    max_combi
 }
 
 fn main() {
@@ -285,6 +299,8 @@ fn main() {
 
     let valves = Valves::parse(&inp);
 
+    assert_eq!(valves.valves.len(), inp.trim().lines().count());
+
     println!("Answer #1: {}", part1(&valves));
-    //println!("Answer #2: {}", part2(&valves));
+    println!("Answer #2: {}", part2(&valves));
 }
