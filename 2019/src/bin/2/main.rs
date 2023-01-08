@@ -1,4 +1,4 @@
-use intcode::{IntComputer, Word};
+use aoc_2019::intcode::{IntComputer, Word};
 use itertools::iproduct;
 use std::fs;
 

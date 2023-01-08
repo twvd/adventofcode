@@ -1,9 +1,6 @@
 use num_traits::FromPrimitive;
 use std::num::ParseIntError;
 
-#[macro_use]
-extern crate num_derive;
-
 #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
 enum Opcode {
     Add = 1,
@@ -107,7 +104,7 @@ impl IntComputer {
 
 #[cfg(test)]
 mod tests {
-    use crate::IntComputer;
+    use crate::intcode::IntComputer;
 
     #[test]
     fn day2_add_mul_halt() {
