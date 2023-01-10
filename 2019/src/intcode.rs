@@ -69,6 +69,13 @@ impl DecodedOp {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum IntComputerState {
+    Reset,
+    Continue,
+    Halt,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct IntComputer {
     mem: Vec<Word>,
@@ -76,13 +83,14 @@ pub struct IntComputer {
     trace: bool,
     input: VecDeque<Word>,
     output: VecDeque<Word>,
+    state: IntComputerState,
 }
 
 type ResultT<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 impl IntComputer {
-    pub fn from_str(inp: &str) -> ResultT<Self> {
-        let mem: Vec<Word> = inp
+    pub fn from_str(prog: &str) -> ResultT<Self> {
+        let mem: Vec<Word> = prog
             .trim()
             .split(',')
             .map(|n| n.parse())
@@ -93,7 +101,14 @@ impl IntComputer {
             trace: false,
             input: VecDeque::new(),
             output: VecDeque::new(),
+            state: IntComputerState::Reset,
         })
+    }
+
+    pub fn from_str_input(prog: &str, input: &[Word]) -> ResultT<Self> {
+        let mut c = Self::from_str(prog)?;
+        c.input(input);
+        Ok(c)
     }
 
     pub fn trace(&mut self) -> &mut Self {
@@ -129,6 +144,7 @@ impl IntComputer {
     pub fn step(&mut self) -> ResultT<bool> {
         let op = DecodedOp::decode(&self.mem[self.pc..])?;
 
+        self.state = IntComputerState::Continue;
         self.pc += op.len;
 
         // Translated arguments (using address modes)
@@ -189,13 +205,42 @@ impl IntComputer {
                 self.write_mem(arg[2].try_into()?, if targ[0] == targ[1] { 1 } else { 0 });
                 Ok(false)
             }
-            Opcode::Halt => Ok(true),
+            Opcode::Halt => {
+                self.state = IntComputerState::Halt;
+                Ok(true)
+            }
         }
     }
 
     pub fn run(&mut self) -> ResultT<&mut Self> {
         while !self.step()? {}
         Ok(self)
+    }
+
+    pub fn run_to_output_or_halt(&mut self) -> ResultT<&mut Self> {
+        let outlen = self.output.len();
+        while outlen >= self.output.len() {
+            if self.step()? {
+                break;
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn run_to_output(&mut self) -> ResultT<&mut Self> {
+        let outlen = self.output.len();
+        while outlen >= self.output.len() {
+            if self.step()? {
+                return Err("Program halted".into());
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn is_halted(&self) -> bool {
+        self.state == IntComputerState::Halt
     }
 }
 
