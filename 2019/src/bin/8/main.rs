@@ -20,10 +20,10 @@ fn part2(images: &Images) -> String {
         .rev()
         .fold(Vec::from([2; WIDTH * HEIGHT]), |a, l| {
             l.iter()
-                .enumerate()
-                .map(|(i, &px)| match px {
-                    2 => a[i],
-                    _ => px,
+                .zip(a)
+                .map(|(&lpx, apx)| match lpx {
+                    2 => apx,
+                    _ => lpx,
                 })
                 .collect()
         });
