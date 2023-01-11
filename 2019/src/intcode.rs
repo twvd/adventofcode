@@ -12,6 +12,7 @@ enum Opcode {
     JumpIfFalse = 6,
     LessThan = 7,
     Equals = 8,
+    RelativeBase = 9,
     Halt = 99,
 }
 
@@ -19,8 +20,9 @@ enum Opcode {
 enum AddrMode {
     Position = 0,
     Immediate = 1,
+    Relative = 2,
 }
-pub type Word = i64;
+pub type Word = i128;
 
 #[derive(Debug, Clone)]
 struct DecodedOp {
@@ -42,7 +44,7 @@ impl DecodedOp {
     fn op_len(op: Opcode) -> usize {
         match op {
             Opcode::Halt => 1,
-            Opcode::Input | Opcode::Output => 2,
+            Opcode::Input | Opcode::Output | Opcode::RelativeBase => 2,
             Opcode::JumpIfTrue | Opcode::JumpIfFalse => 3,
             Opcode::Add | Opcode::Mul | Opcode::LessThan | Opcode::Equals => 4,
         }
@@ -51,11 +53,11 @@ impl DecodedOp {
     fn decode(raw: &[Word]) -> ResultT<Self> {
         let raw_op = raw.get(0).ok_or("Address outof range")?;
         let op =
-            Opcode::from_i64(raw_op % 100).ok_or(format!("Unknown opcode: {}", raw_op % 100))?;
+            Opcode::from_i128(raw_op % 100).ok_or(format!("Unknown opcode: {}", raw_op % 100))?;
         let raw_modes: [Word; 3] = [raw_op / 100 % 10, raw_op / 1000 % 10, raw_op / 10000 % 10];
         let modes: Vec<AddrMode> = raw_modes
             .into_iter()
-            .map(|i| AddrMode::from_i64(i))
+            .map(|i| AddrMode::from_i128(i))
             .collect::<Option<_>>()
             .ok_or("Unknown addressing mode")?;
         let len = Self::op_len(op);
@@ -84,6 +86,7 @@ pub struct IntComputer {
     input: VecDeque<Word>,
     output: VecDeque<Word>,
     state: IntComputerState,
+    relbase: Word,
 }
 
 type ResultT<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -102,6 +105,7 @@ impl IntComputer {
             input: VecDeque::new(),
             output: VecDeque::new(),
             state: IntComputerState::Reset,
+            relbase: 0
         })
     }
 
@@ -121,12 +125,12 @@ impl IntComputer {
     }
 
     pub fn read_mem(&self, addr: usize) -> Word {
-        self.mem[addr]
+        *self.mem.get(addr).unwrap_or(&0)
     }
 
     pub fn write_mem(&mut self, addr: usize, val: Word) -> &mut Self {
-        if self.mem.len() < addr {
-            self.mem.resize(addr, 0);
+        if self.mem.len() <= addr {
+            self.mem.resize(addr + 1, 0);
         }
         self.mem[addr] = val;
         self
@@ -147,13 +151,25 @@ impl IntComputer {
         self.state = IntComputerState::Continue;
         self.pc += op.len;
 
-        // Translated arguments (using address modes)
+        // Translated arguments (for instructions that can use values)
         let targ: Vec<_> = op
             .args_modes()
             .iter()
             .map(|(a, m)| match m {
                 AddrMode::Immediate => Ok(*a),
                 AddrMode::Position => Ok(self.read_mem((*a).try_into()?)),
+                AddrMode::Relative => Ok(self.read_mem((*a + self.relbase).try_into()?)),
+
+            })
+            .collect::<ResultT<_>>()?;
+
+        // Address arguments (for instructions that use addresses)
+        let rarg: Vec<_> = op
+            .args_modes()
+            .iter()
+            .map(|(a, m)| match m {
+                AddrMode::Relative => Ok(*a + self.relbase),
+                _ => Ok(*a),
             })
             .collect::<ResultT<_>>()?;
 
@@ -162,23 +178,23 @@ impl IntComputer {
 
         if self.trace {
             println!(
-                "PC {} -> {:?}({}) {:?} ({:?})",
-                self.pc, op.op, op.len, arg, op.modes
+                "PC {} -> {:?}({}) {:?} ({:?}) relbase: {}",
+                self.pc, op.op, op.len, arg, op.modes, self.relbase
             );
         }
 
         match op.op {
             Opcode::Add => {
-                self.write_mem(arg[2].try_into()?, targ[0] + targ[1]);
+                self.write_mem(rarg[2].try_into()?, targ[0] + targ[1]);
                 Ok(false)
             }
             Opcode::Mul => {
-                self.write_mem(arg[2].try_into()?, targ[0] * targ[1]);
+                self.write_mem(rarg[2].try_into()?, targ[0] * targ[1]);
                 Ok(false)
             }
             Opcode::Input => {
                 let val = self.input.pop_front().ok_or("Input underrun")?;
-                self.write_mem(arg[0].try_into()?, val);
+                self.write_mem(rarg[0].try_into()?, val);
                 Ok(false)
             }
             Opcode::Output => {
@@ -198,13 +214,17 @@ impl IntComputer {
                 Ok(false)
             }
             Opcode::LessThan => {
-                self.write_mem(arg[2].try_into()?, if targ[0] < targ[1] { 1 } else { 0 });
+                self.write_mem(rarg[2].try_into()?, if targ[0] < targ[1] { 1 } else { 0 });
                 Ok(false)
             }
             Opcode::Equals => {
-                self.write_mem(arg[2].try_into()?, if targ[0] == targ[1] { 1 } else { 0 });
+                self.write_mem(rarg[2].try_into()?, if targ[0] == targ[1] { 1 } else { 0 });
                 Ok(false)
             }
+            Opcode::RelativeBase => {
+                self.relbase += targ[0];
+                Ok(false)
+            },
             Opcode::Halt => {
                 self.state = IntComputerState::Halt;
                 Ok(true)
@@ -213,7 +233,7 @@ impl IntComputer {
     }
 
     pub fn run(&mut self) -> ResultT<&mut Self> {
-        while !self.step()? {}
+        while !self.step()? { }
         Ok(self)
     }
 
@@ -247,6 +267,7 @@ impl IntComputer {
 #[cfg(test)]
 mod tests {
     use crate::intcode::IntComputer;
+    use crate::intcode::Word;
 
     #[test]
     fn day2_add_mul_halt() {
@@ -430,34 +451,47 @@ mod tests {
     }
 
     #[test]
-    fn day5_large() {
-        const PROGRAM: &str = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
+    fn day9_quine() {
+        const PROGRAM: &str = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
         assert_eq!(
             IntComputer::from_str(PROGRAM)
                 .unwrap()
-                .input(&[0])
                 .run()
                 .unwrap()
                 .output(),
-            &[999]
+            PROGRAM.split(",")
+            .map(|i| i.parse::<Word>().unwrap())
+            .collect::<Vec<Word>>()
         );
+    }
+
+    #[test]
+    fn day9_bignum() {
+        const PROGRAM: &str = "1102,34915192,34915192,7,4,7,99,0";
         assert_eq!(
             IntComputer::from_str(PROGRAM)
                 .unwrap()
-                .input(&[8])
                 .run()
                 .unwrap()
-                .output(),
-            &[1000]
+                .output()
+                .get(0)
+                .unwrap()
+                .to_string()
+                .len(),
+            16
         );
+    }
+
+    #[test]
+    fn day9_bignum_const() {
+        const PROGRAM: &str = "104,1125899906842624,99";
         assert_eq!(
             IntComputer::from_str(PROGRAM)
                 .unwrap()
-                .input(&[9])
                 .run()
                 .unwrap()
                 .output(),
-            &[1001]
+            &[1125899906842624]
         );
     }
 }
