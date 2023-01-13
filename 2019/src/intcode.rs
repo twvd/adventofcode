@@ -105,7 +105,7 @@ impl IntComputer {
             input: VecDeque::new(),
             output: VecDeque::new(),
             state: IntComputerState::Reset,
-            relbase: 0
+            relbase: 0,
         })
     }
 
@@ -159,7 +159,6 @@ impl IntComputer {
                 AddrMode::Immediate => Ok(*a),
                 AddrMode::Position => Ok(self.read_mem((*a).try_into()?)),
                 AddrMode::Relative => Ok(self.read_mem((*a + self.relbase).try_into()?)),
-
             })
             .collect::<ResultT<_>>()?;
 
@@ -224,7 +223,7 @@ impl IntComputer {
             Opcode::RelativeBase => {
                 self.relbase += targ[0];
                 Ok(false)
-            },
+            }
             Opcode::Halt => {
                 self.state = IntComputerState::Halt;
                 Ok(true)
@@ -233,7 +232,7 @@ impl IntComputer {
     }
 
     pub fn run(&mut self) -> ResultT<&mut Self> {
-        while !self.step()? { }
+        while !self.step()? {}
         Ok(self)
     }
 
@@ -459,9 +458,10 @@ mod tests {
                 .run()
                 .unwrap()
                 .output(),
-            PROGRAM.split(",")
-            .map(|i| i.parse::<Word>().unwrap())
-            .collect::<Vec<Word>>()
+            PROGRAM
+                .split(",")
+                .map(|i| i.parse::<Word>().unwrap())
+                .collect::<Vec<Word>>()
         );
     }
 
