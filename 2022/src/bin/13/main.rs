@@ -44,7 +44,7 @@ fn nomnom_packet(input: &str) -> IResult<&str, PacketField> {
     ))(input)
 }
 
-fn part1(packets: &Vec<PacketField>) -> usize {
+fn part1(packets: &[PacketField]) -> usize {
     packets
         .iter()
         .tuples()
@@ -53,8 +53,8 @@ fn part1(packets: &Vec<PacketField>) -> usize {
         .fold(0, |acc, (i, _)| acc + (i + 1))
 }
 
-fn part2(origpackets: &Vec<PacketField>) -> usize {
-    let mut packets = origpackets.to_owned();
+fn part2(origpackets: &[PacketField]) -> usize {
+    let mut packets = origpackets.to_vec();
     let dividers = [
         nomnom_packet("[[2]]").unwrap().1,
         nomnom_packet("[[6]]").unwrap().1,
@@ -72,8 +72,8 @@ fn part2(origpackets: &Vec<PacketField>) -> usize {
 fn main() {
     let inp = fs::read_to_string("inputs/13.txt").unwrap();
     let packets: Vec<PacketField> = inp
-        .split("\n")
-        .filter(|x| x.len() > 0)
+        .lines()
+        .filter(|x| !x.is_empty())
         .map(|p| nomnom_packet(p).unwrap().1)
         .collect();
 
