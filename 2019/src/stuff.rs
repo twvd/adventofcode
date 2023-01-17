@@ -36,4 +36,22 @@ impl Direction {
             _ => unreachable!(),
         }
     }
+
+    pub fn rotate_90deg(&self, d: Direction) -> Direction {
+        match d {
+            Direction::Left => match self {
+                Direction::Up => Direction::Left,
+                Direction::Left => Direction::Down,
+                Direction::Down => Direction::Right,
+                Direction::Right => Direction::Up,
+            },
+            Direction::Right => match self {
+                Direction::Up => Direction::Right,
+                Direction::Right => Direction::Down,
+                Direction::Down => Direction::Left,
+                Direction::Left => Direction::Up,
+            },
+            _ => unreachable!(),
+        }
+    }
 }
