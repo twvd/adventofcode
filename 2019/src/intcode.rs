@@ -71,14 +71,14 @@ impl DecodedOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum IntComputerState {
     Reset,
     Continue,
     Halt,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct IntComputer {
     mem: Vec<Word>,
     pc: usize,
@@ -139,6 +139,10 @@ impl IntComputer {
     pub fn input(&mut self, val: &[Word]) -> &mut Self {
         self.input.extend(val.iter());
         self
+    }
+
+    pub fn input_str(&mut self, val: &str) -> &mut Self {
+        self.input(&val.chars().map(|c| c as Word).collect::<Vec<_>>())
     }
 
     pub fn output(&mut self) -> Vec<Word> {

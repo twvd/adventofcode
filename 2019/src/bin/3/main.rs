@@ -16,7 +16,7 @@ fn parse(inp: &str) -> Vec<Moves> {
             l.split(',')
                 .map(|m| {
                     (
-                        Direction::from_udlr(m.chars().nth(0).unwrap()),
+                        Direction::from_ascii(m.chars().nth(0).unwrap()),
                         m[1..].parse().unwrap(),
                     )
                 })

@@ -1,4 +1,5 @@
 use num_traits::sign::Signed;
+use strum::EnumIter;
 
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub struct Point<T>(pub T, pub T);
@@ -18,7 +19,7 @@ impl<T: Signed + Copy> Point<T> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, EnumIter)]
 pub enum Direction {
     Up,
     Right,
@@ -27,12 +28,12 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn from_udlr(c: char) -> Direction {
+    pub fn from_ascii(c: char) -> Direction {
         match c {
-            'L' => Direction::Left,
-            'R' => Direction::Right,
-            'U' => Direction::Up,
-            'D' => Direction::Down,
+            'L' | '<' => Direction::Left,
+            'R' | '>' => Direction::Right,
+            'U' | '^' => Direction::Up,
+            'D' | 'v' => Direction::Down,
             _ => unreachable!(),
         }
     }
