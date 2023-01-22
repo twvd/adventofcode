@@ -1,6 +1,7 @@
 use num_traits::FromPrimitive;
 use std::collections::VecDeque;
 use std::num::ParseIntError;
+use std::{error::Error, fmt};
 
 #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
 enum Opcode {
@@ -76,6 +77,17 @@ pub enum IntComputerState {
     Reset,
     Continue,
     Halt,
+}
+
+#[derive(Debug)]
+struct InputUnderrunError;
+
+impl Error for InputUnderrunError {}
+
+impl fmt::Display for InputUnderrunError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Input underrun")
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -196,9 +208,14 @@ impl IntComputer {
                 Ok(false)
             }
             Opcode::Input => {
-                let val = self.input.pop_front().ok_or("Input underrun")?;
-                self.write_mem(rarg[0].try_into()?, val);
-                Ok(false)
+                if let Some(val) = self.input.pop_front() {
+                    self.write_mem(rarg[0].try_into()?, val);
+                    Ok(false)
+                } else {
+                    // Back up to allow resuming execution
+                    self.pc -= op.len;
+                    Err(Box::new(InputUnderrunError {}))
+                }
             }
             Opcode::Output => {
                 self.output.push_back(targ[0].try_into()?);
@@ -238,6 +255,22 @@ impl IntComputer {
     pub fn run(&mut self) -> ResultT<&mut Self> {
         while !self.step()? {}
         Ok(self)
+    }
+
+    pub fn run_to_input(&mut self) -> ResultT<&mut Self> {
+        loop {
+            match self.step() {
+                Ok(true) => return Ok(self),
+                Ok(false) => continue,
+                Err(e) => {
+                    if e.is::<InputUnderrunError>() {
+                        return Ok(self);
+                    } else {
+                        return Err(e);
+                    }
+                }
+            }
+        }
     }
 
     pub fn run_to_output_or_halt(&mut self) -> ResultT<&mut Self> {
