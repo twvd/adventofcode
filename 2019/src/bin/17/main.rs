@@ -18,6 +18,7 @@ fn feed_to_map(feed: &str) -> HashSet<Pt> {
         .collect()
 }
 
+#[allow(dead_code)]
 fn dump_output(out: &[Word]) {
     println!(
         "{}",
@@ -52,17 +53,17 @@ fn vacuum_computer(prog: &str, main: &str, movfunc: &[&str], camera: bool) -> In
     comp
 }
 
-fn part2(prog: &str, map: &str) -> Word {
+fn part2(prog: &str, _map: &str) -> Word {
     let mut comp = vacuum_computer(prog, "A,B", &["L,4", "L,L,4", "4,R"], true);
 
     comp.run().unwrap();
 
-    let out = comp.output();
+    let _out = comp.output();
     //dump_output(&out[..(out.len() - 2)]);
 
     todo!();
 
-    out[out.len() - 1]
+    //out[out.len() - 1]
 }
 
 fn main() {
