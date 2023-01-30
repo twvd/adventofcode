@@ -1,9 +1,8 @@
-use aoc_2019::stuff::{Direction, Point};
+use aoc_2019::stuff::Point;
 use itertools::Itertools;
 use pathfinding::prelude::{bfs, dijkstra};
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
-use strum::IntoEnumIterator;
 
 type Pt = Point<i32>;
 type Map = HashMap<Pt, Tile>;
@@ -60,8 +59,8 @@ fn gen_path_cache(map: &Map) -> Option<Paths> {
         let path = match bfs(
             &start_p,
             |&p| {
-                Direction::iter()
-                    .map(|d| p.move_dir(d, 1))
+                p.adjacent_straight()
+                    .into_iter()
                     .filter(|newp| map[newp] != Tile::Wall)
                     .collect::<Vec<_>>()
             },
@@ -109,50 +108,49 @@ fn find_shortest_path(map: &Map, entrances: &[Pt]) -> Option<usize> {
         Tile::Key(k) => Some(k),
         _ => None,
     }));
-    let paths = gen_path_cache(map).unwrap();
+    let paths = gen_path_cache(map)?;
 
-    Some(
-        dijkstra(
-            &(entrances.to_vec(), BTreeSet::new()), // positions, keys collected
-            |(ps, keys_collected)| {
-                ps.iter()
-                    .flat_map(|p| {
-                        paths
-                            .iter()
-                            .filter(|&(pp, path)| {
-                                pp.0 == *p
-                                    && path.keys_needed.is_subset(keys_collected)
-                                    && !keys_collected.contains(&path.new_key)
-                            })
-                            .map(|(pp, path)| {
-                                let mut new_keys = keys_collected.clone();
-                                new_keys.insert(path.new_key);
-                                let mut new_pos = ps
-                                    .iter()
-                                    .filter(|&&psp| psp != *p)
-                                    .copied()
-                                    .collect::<Vec<Pt>>();
-                                new_pos.push(pp.1);
+    let (_, path_len) = dijkstra(
+        &(entrances.to_vec(), BTreeSet::new()), // positions, keys collected
+        |(ps, keys_collected)| {
+            ps.iter()
+                .flat_map(|p| {
+                    paths
+                        .iter()
+                        .filter(|&(pp, path)| {
+                            pp.0 == *p
+                                && path.keys_needed.is_subset(keys_collected)
+                                && !keys_collected.contains(&path.new_key)
+                        })
+                        .map(|(pp, path)| {
+                            let mut new_keys = keys_collected.clone();
+                            new_keys.insert(path.new_key);
+                            let mut new_pos = ps
+                                .iter()
+                                .filter(|&&psp| psp != *p)
+                                .copied()
+                                .collect::<Vec<Pt>>();
+                            new_pos.push(pp.1);
 
-                                ((new_pos, new_keys), path.len)
-                            })
-                    })
-                    .collect::<Vec<_>>()
-            },
-            |(_, k)| *k == keys,
-        )?
-        .1,
-    )
+                            ((new_pos, new_keys), path.len)
+                        })
+                })
+                .collect::<Vec<_>>()
+        },
+        |(_, k)| *k == keys,
+    )?;
+
+    Some(path_len)
 }
 
 fn part1(map: &Map) -> Option<usize> {
-    let entrance = *map.iter().find(|&(_, c)| *c == Tile::Entrance).unwrap().0;
+    let (&entrance, _) = map.iter().find(|&(_, c)| *c == Tile::Entrance)?;
 
     find_shortest_path(map, &[entrance])
 }
 
 fn part2(map: &Map) -> Option<usize> {
-    let entrance = *map.iter().find(|&(_, c)| *c == Tile::Entrance).unwrap().0;
+    let (&entrance, _) = map.iter().find(|&(_, c)| *c == Tile::Entrance)?;
 
     let mut modded_map = map.clone();
     let modded_entrances = entrance.adjacent_diagonal();
