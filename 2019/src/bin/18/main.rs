@@ -57,7 +57,7 @@ fn gen_path_cache(map: &Map) -> Option<Paths> {
     let mut ret = Paths::new();
 
     for ((&start_p, &start_t), (&end_p, &end_t)) in targets.iter().tuple_combinations() {
-        let path = bfs::<Pt, _, _, _>(
+        let path = match bfs(
             &start_p,
             |&p| {
                 Direction::iter()
@@ -66,7 +66,11 @@ fn gen_path_cache(map: &Map) -> Option<Paths> {
                     .collect::<Vec<_>>()
             },
             |&p| p == end_p,
-        )?;
+        ) {
+            Some(p) => p,
+            None => continue,
+        };
+
         let keys_needed = path
             .iter()
             .filter_map(|p| match map[p] {
@@ -100,7 +104,7 @@ fn gen_path_cache(map: &Map) -> Option<Paths> {
     Some(ret)
 }
 
-fn find_shortest_path(map: &Map, entrance: Pt) -> Option<usize> {
+fn find_shortest_path(map: &Map, entrances: &[Pt]) -> Option<usize> {
     let keys: BTreeSet<char> = BTreeSet::from_iter(map.iter().filter_map(|(_, &c)| match c {
         Tile::Key(k) => Some(k),
         _ => None,
@@ -108,17 +112,30 @@ fn find_shortest_path(map: &Map, entrance: Pt) -> Option<usize> {
     let paths = gen_path_cache(map).unwrap();
 
     Some(
-        dijkstra::<(Pt, BTreeSet<char>), _, _, _, _>(
-            &(entrance, BTreeSet::new()), // pos, keys collected
-            |(p, keys_collected)| {
-                paths
-                    .iter()
-                    .filter(|&(pp, path)| pp.0 == *p && path.keys_needed.is_subset(keys_collected))
-                    .map(|(pp, path)| {
-                        let mut new_keys = keys_collected.clone();
-                        new_keys.insert(path.new_key);
+        dijkstra(
+            &(entrances.to_vec(), BTreeSet::new()), // positions, keys collected
+            |(ps, keys_collected)| {
+                ps.iter()
+                    .flat_map(|p| {
+                        paths
+                            .iter()
+                            .filter(|&(pp, path)| {
+                                pp.0 == *p
+                                    && path.keys_needed.is_subset(keys_collected)
+                                    && !keys_collected.contains(&path.new_key)
+                            })
+                            .map(|(pp, path)| {
+                                let mut new_keys = keys_collected.clone();
+                                new_keys.insert(path.new_key);
+                                let mut new_pos = ps
+                                    .iter()
+                                    .filter(|&&psp| psp != *p)
+                                    .copied()
+                                    .collect::<Vec<Pt>>();
+                                new_pos.push(pp.1);
 
-                        ((pp.1, new_keys), path.len)
+                                ((new_pos, new_keys), path.len)
+                            })
                     })
                     .collect::<Vec<_>>()
             },
@@ -131,11 +148,23 @@ fn find_shortest_path(map: &Map, entrance: Pt) -> Option<usize> {
 fn part1(map: &Map) -> Option<usize> {
     let entrance = *map.iter().find(|&(_, c)| *c == Tile::Entrance).unwrap().0;
 
-    find_shortest_path(map, entrance)
+    find_shortest_path(map, &[entrance])
 }
 
-fn part2(map: &Map) -> usize {
-    0
+fn part2(map: &Map) -> Option<usize> {
+    let entrance = *map.iter().find(|&(_, c)| *c == Tile::Entrance).unwrap().0;
+
+    let mut modded_map = map.clone();
+    let modded_entrances = entrance.adjacent_diagonal();
+    modded_map.insert(entrance, Tile::Wall);
+    for p in entrance.adjacent_straight() {
+        modded_map.insert(p, Tile::Wall);
+    }
+    for &p in &modded_entrances {
+        modded_map.insert(p, Tile::Entrance);
+    }
+
+    find_shortest_path(&modded_map, &modded_entrances)
 }
 
 fn main() {
@@ -143,5 +172,5 @@ fn main() {
     let map = parse(&inp).unwrap();
 
     println!("Answer #1: {}", part1(&map).unwrap());
-    println!("Answer #2: {}", part2(&map));
+    println!("Answer #2: {}", part2(&map).unwrap());
 }
