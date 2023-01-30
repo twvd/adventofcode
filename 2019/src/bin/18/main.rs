@@ -7,7 +7,7 @@ use std::fs;
 type Pt = Point<i32>;
 type Map = HashMap<Pt, Tile>;
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
 enum Tile {
     Entrance,
     Wall,
@@ -16,7 +16,6 @@ enum Tile {
     Key(char),
 }
 
-#[derive(Debug)]
 struct Path {
     len: usize,
     keys_needed: BTreeSet<char>,
@@ -35,7 +34,7 @@ fn parse(inp: &str) -> Option<Map> {
                     '@' => Tile::Entrance,
                     '#' => Tile::Wall,
                     'a'..='z' => Tile::Key(c),
-                    'A'..='Z' => Tile::Door(c),
+                    'A'..='Z' => Tile::Door(c.to_lowercase().next()?),
                     _ => return None,
                 },
             );
@@ -73,7 +72,7 @@ fn gen_path_cache(map: &Map) -> Option<Paths> {
         let keys_needed = path
             .iter()
             .filter_map(|p| match map[p] {
-                Tile::Door(d) => Some(d.to_lowercase().next()?),
+                Tile::Door(d) => Some(d),
                 _ => None,
             })
             .collect::<BTreeSet<_>>();
