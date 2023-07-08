@@ -1,4 +1,4 @@
-#![feature(drain_filter)]
+#![feature(extract_if)]
 #![feature(slice_group_by)]
 
 use itertools::Itertools;
@@ -87,7 +87,7 @@ fn part2(asteroids: &[Point]) -> i32 {
             sweep = do_sweep(&roids, &station);
             assert!(!sweep.is_empty());
 
-            roids.drain_filter(|i| sweep.contains(i));
+            let _ = roids.extract_if(|i| sweep.contains(i));
         }
 
         let target = sweep.pop_front().unwrap();
