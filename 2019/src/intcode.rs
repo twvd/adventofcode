@@ -161,6 +161,15 @@ impl IntComputer {
         self.output.drain(..).collect()
     }
 
+    pub fn output_str(&mut self) -> Option<String> {
+        Some(
+            self.output()
+                .into_iter()
+                .flat_map(|w| char::from_u32(w.try_into().ok()?))
+                .collect(),
+        )
+    }
+
     pub fn step(&mut self) -> ResultT<bool> {
         let op = DecodedOp::decode(&self.mem[self.pc..])?;
 

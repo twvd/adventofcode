@@ -80,7 +80,9 @@ fn parse(inp: &str) -> Option<Map> {
         .into_iter()
         .filter(|&(_, t)| matches!(t, Tile::Placeholder(_)))
     {
-        let Tile::Placeholder(c) = t else { unreachable!() };
+        let Tile::Placeholder(c) = t else {
+            unreachable!()
+        };
 
         // Upwards          Downwards
         // _                .
@@ -187,7 +189,9 @@ fn part2(map: &Map) -> Option<usize> {
     fn traverse_portal(p: Pt3D, dest: Pt, t: Tile) -> Option<Pt3D> {
         assert!(matches!(t, Tile::Portal(_)));
 
-        let Tile::Portal((_, ptype)) = t else { unreachable!(); };
+        let Tile::Portal((_, ptype)) = t else {
+            unreachable!();
+        };
 
         if p.1 == 0 && ptype == Portal::Outer {
             None
